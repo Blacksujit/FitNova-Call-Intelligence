@@ -18,3 +18,5 @@ google-genai>=1.0.0
 mangum>=0.21.0
 # PostgreSQL for production
 psycopg2-binary>=2.9.9
+numpy>=2.0.0
+scipy>=1.13.0
