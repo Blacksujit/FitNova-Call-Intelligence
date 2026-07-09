@@ -22,7 +22,7 @@ streamlit run fitnova/dashboard/app.py
 
 ![Pipeline Arcitecture](./fitnova-call-intel/Arcitecture/fitnova_pipeline_architecture.png)
 
-## Architecture
+## System Architecture
 
 ```mermaid
 flowchart LR
