@@ -20,7 +20,7 @@ streamlit run fitnova/dashboard/app.py
 
 ## Pipeline Architecture:
 
-![Pipeline Arcitecture](Arcitecture/fitnova_pipeline_architecture.png)
+![Pipeline Arcitecture](./fitnova-call-intel/Arcitecture/fitnova_pipeline_architecture.png)
 
 ## Architecture
 
