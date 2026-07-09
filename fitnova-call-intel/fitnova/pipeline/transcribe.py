@@ -27,7 +27,30 @@ def transcribe_and_diarize(audio_bytes: bytes, call_id: str) -> list[dict]:
 
     config = aai.TranscriptionConfig(
         speaker_labels=True,
-        language_code="en",
+        language_detection=True,
+        speech_models=["universal-3-5-pro", "universal-2"],
+        prompt=(
+            "Sales consultation call between a FitNova fitness advisor "
+            "and a prospective customer discussing fitness goals, "
+            "coaching programs, pricing, and sign-up. "
+            "May contain Hinglish (Hindi-English mix) — preserve both languages."
+        ),
+        keyterms_prompt=[
+            "FitNova", "FatCommandos", "Weight Loss Commandos",
+            "personal training", "nutrition plan", "coaching program",
+            "free trial", "transformation", "body recomposition",
+            "macro tracking", "habit coaching", "accountability call",
+        ],
+        redact_pii=True,
+        redact_pii_policies=[
+            aai.PIIRedactionPolicy.person_name,
+            aai.PIIRedactionPolicy.phone_number,
+            aai.PIIRedactionPolicy.email_address,
+            aai.PIIRedactionPolicy.location,
+            aai.PIIRedactionPolicy.banking_information,
+            aai.PIIRedactionPolicy.credit_card_number,
+        ],
+        redact_pii_sub=aai.PIISubstitutionPolicy.entity_name,
     )
 
     transcriber = aai.Transcriber()

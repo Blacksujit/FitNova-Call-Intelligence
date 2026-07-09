@@ -6,6 +6,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# ── Test isolation: prevent .env file from leaking into tests ──────────
+# Set to empty before load_dotenv() runs so the .env values don't take effect
+import os
+os.environ["ASSEMBLYAI_API_KEY"] = ""
+os.environ["ANTHROPIC_API_KEY"] = ""
+
 import pytest
 from fastapi.testclient import TestClient
 

@@ -88,6 +88,25 @@ Customer: Let me discuss with my spouse and get back to you.
 Advisor: Okay, but I can't guarantee the price after today. I'll send you the details on WhatsApp.
 """,
     },
+    {
+        "id": "DEMO-HING-004",
+        "advisor_email": "rahul@fitnova.in",
+        "script": """
+Advisor: Namaste, main Rahul FitNova se bol raha hoon. Kya main Vikram ji se baat kar raha hoon?
+Customer: Haan, Vikram bol raha hoon.
+Advisor: Aapne fitness inquiry kiya tha na? Aap ke goals kya hain?
+Customer: Ha ji, main weight loss karna chahta hoon. Past 6 months se koshish kar raha hoon par koi result nahi.
+Advisor: Main samajh gaya. Aap roz kitna time de sakte hain?
+Customer: I can do 30-40 minutes, 4 days a week maximum.
+Advisor: Perfect! We have a great plan for you. It's ₹12,000 for three months, includes personalized coaching, diet plan, everything.
+Customer: Aur kya kya milega ismein?
+Advisor: Weekly check-in, habit coaching, aur free trial — you can try first class free.
+Customer: Achha, trial free hai? Let's try that first.
+Advisor: Bilkul. I can book you for Saturday at 10 AM. Shall I send details on WhatsApp?
+Customer: Haan, bhej do. Thank you!
+Advisor: Welcome ji! Confirmation aapke WhatsApp par aayegi.
+""",
+    },
 ]
 
 
@@ -107,14 +126,28 @@ def create_metadata_json(call_id: str, advisor_email: str, audio_filename: str):
 
 
 def process_with_stub(external_call_id: str, advisor_id: int, script_text: str, db_session) -> dict:
-    """Simulate pipeline processing using the script text as placeholder audio."""
-    return run_pipeline(
-        external_call_id=external_call_id,
-        advisor_id=advisor_id,
-        source_type="folder",
-        audio_bytes=script_text.encode("utf-8"),
-        db=db_session,
-    )
+    """Simulate pipeline processing using the script text as placeholder audio.
+    
+    Temporarily clears AssemblyAI/Anthropic keys so the stub transcriber and
+    stub analyzer are used. This is intentional — the demo's sample "audio"
+    files are actually text, not real audio. Real API processing requires
+    actual .wav/.mp3 files in data/incoming/.
+    """
+    saved = {}
+    for k in ("ASSEMBLYAI_API_KEY", "ANTHROPIC_API_KEY"):
+        saved[k] = os.environ.pop(k, None)
+    try:
+        return run_pipeline(
+            external_call_id=external_call_id,
+            advisor_id=advisor_id,
+            source_type="folder",
+            audio_bytes=script_text.encode("utf-8"),
+            db=db_session,
+        )
+    finally:
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
 
 
 def main():

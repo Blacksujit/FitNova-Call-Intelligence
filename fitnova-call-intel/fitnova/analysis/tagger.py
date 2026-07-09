@@ -31,6 +31,12 @@ Analyze the sales call transcript below and produce a structured evaluation.
 - weak_trial_booking: No specific trial session booked, vague follow-up
 - talking_over_customer: Advisor interrupted or dominated the conversation
 
+## Language notes
+Transcripts may contain Hinglish (Hindi-English code-switching), e.g.
+"aap ka fitness goal kya hai?" or "yeh plan ₹12,000 ka hai."
+Analyze the substance regardless of language — the scoring criteria
+are the same.
+
 ## Output format
 Return a JSON object with:
 1. "is_sales_call": true/false (with a short reason)
@@ -206,11 +212,11 @@ def _stub_analysis(segments: list[dict]) -> dict:
     text_lower = transcript_text.lower()
 
     # ── Scoring — simple rules ─────────────────────────────────────────
-    has_discovery = any(p in text_lower for p in ["goal", "budget", "timeline", "commit", "experience", "tell me about"])
-    has_compliance_issue = any(p in text_lower for p in ["guaranteed", "100%", "never had a client"])
-    has_pressure = any(p in text_lower for p in ["won't be available", "expires today", "act now", "limited time"])
-    has_price_before_value = any(p in text_lower for p in ["sign up today", "discount"])
-    has_booking = any(p in text_lower for p in ["trial session", "book", "slot", "confirmation"])
+    has_discovery = any(p in text_lower for p in ["goal", "budget", "timeline", "commit", "experience", "tell me about", "kya", "kaise", "kab"])
+    has_compliance_issue = any(p in text_lower for p in ["guaranteed", "100%", "never had a client", "guarantee"])
+    has_pressure = any(p in text_lower for p in ["won't be available", "expires today", "act now", "limited time", "last chance"])
+    has_price_before_value = any(p in text_lower for p in ["sign up today", "discount", "special rate"])
+    has_booking = any(p in text_lower for p in ["trial session", "book", "slot", "confirmation", "free trial", "booking"])
 
     scores = [
         {"dimension": "needs_discovery", "value": 4 if has_discovery else 2,
