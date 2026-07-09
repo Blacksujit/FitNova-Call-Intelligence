@@ -24,6 +24,10 @@ streamlit run fitnova-call-intel/fitnova/dashboard/app.py
 
 ---
 
+## Pipeline Architecture:
+
+![Pipeline Architectrue](./fitnova-call-intel/Arcitecture/fitnova_pipeline_architecture.png)
+
 ## System Architecture
 
 ```mermaid
