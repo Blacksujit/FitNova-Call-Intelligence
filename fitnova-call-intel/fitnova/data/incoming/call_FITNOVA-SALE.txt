@@ -1,0 +1,23 @@
+Advisor: Hi, good evening! This is Priya from FitNova. Am I speaking with Rahul?
+Customer: Yes, this is Rahul.
+Advisor: Great, Rahul! You had filled out the consultation form on our website about weight loss programs. Is this a good time to chat for a few minutes?
+Customer: Yeah, sure, I have about 10 minutes.
+Advisor: Perfect, I'll be mindful of your time. So tell me, what's been your biggest challenge with weight loss so far?
+Customer: Honestly, I've tried everything. I joined a gym twice, did keto for three months, even tried those meal replacement shakes. I lose weight initially but within six months it all comes back. It's frustrating.
+Advisor: I hear that a lot, Rahul. That cycle of losing and regaining is incredibly common when the approach isn't sustainable. What does a typical day look like for you right now in terms of eating and activity?
+Customer: I work in IT so I'm sitting at a desk most of the day. Breakfast I usually skip, lunch is whatever the office cafeteria has, and dinner is usually late. I try to walk on weekends but weekdays I'm too tired.
+Advisor: That's really helpful to understand. So the main gaps I'm hearing are: inconsistent meal timing, lack of a structured nutrition plan, and minimal movement during the workday. Does that sound right?
+Customer: Yeah, that's exactly it. Can your program actually fix this? Because I've been burned before.
+Advisor: Fair question. And I appreciate you being direct. The difference with our program is we don't give you a generic diet plan. We assign you a dedicated coach who works with your schedule, your food preferences, and your lifestyle. We start with small changes — like fixing your breakfast and adding a 15-minute walk. We don't overhaul everything overnight.
+Customer: That sounds better honestly. What about the cost? I don't want to pay a fortune and then not see results.
+Advisor: Completely understandable. Our program starts at ₹4,999 per month, which includes weekly one-on-one coaching calls, a personalized nutrition plan, daily WhatsApp support, and monthly body composition tracking. We also offer a 7-day free trial so you can experience it before committing.
+Customer: Seven days free? So I can try it and if I don't like it, I can cancel?
+Advisor: Absolutely. No lock-in. If within the first week you don't feel it's adding value, just let us know and there's no charge. And honestly, most of our clients start seeing changes in energy levels within the first week itself.
+Customer: Okay, that sounds fair. What's the next step?
+Advisor: I'd suggest we schedule a 30-minute strategy call with your assigned coach tomorrow. They'll do a deeper assessment and set up your trial. Does tomorrow at 11 AM work for you?
+Customer: 11 AM works. And this call won't be a sales pitch, right? I want to actually talk about my plan.
+Advisor: No sales pitch at all. It's purely a planning session. The coach will understand your goals, answer your questions, and if you both decide it's a fit, they'll set up your trial right after. I'll send you a calendar invite and a WhatsApp reminder. Sound good?
+Customer: Sounds good, Priya. Thanks for not being pushy.
+Advisor: My pleasure, Rahul. I know choosing a program is a big decision. I want you to feel confident. I'll send the invite now. Have a great evening!
+Customer: You too, bye!
+Advisor: Bye bye, take care!
