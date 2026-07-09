@@ -23,6 +23,29 @@ class TagStatus(str, enum.Enum):
     dismissed = "dismissed"
 
 
+class UserRole(str, enum.Enum):
+    sales_director = "sales_director"
+    team_leader = "team_leader"
+    advisor = "advisor"
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False)
+    org_id = Column(Integer, ForeignKey("orgs.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    advisor_id = Column(Integer, ForeignKey("advisors.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    org = relationship("Org")
+    team = relationship("Team")
+    advisor = relationship("Advisor")
+
+
 class Org(Base):
     __tablename__ = "orgs"
     id = Column(Integer, primary_key=True)

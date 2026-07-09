@@ -6,7 +6,8 @@ from fitnova.api import queue as tq
 
 
 def test_process_rate_limit_queues_instead_of_429(client):
-    """When process limit is hit, the middleware should return 202 with a task_id."""
+    """When process limit is hit, the middleware should return 202 with a task_id.
+    Middleware intercepts before auth Depends, so no auth headers needed."""
     from fitnova.api.ratelimit import RATE_LIMITS
 
     with patch.dict(RATE_LIMITS, {"process": (0, 60)}):
@@ -22,10 +23,10 @@ def test_process_rate_limit_queues_instead_of_429(client):
         assert r.headers["X-Task-Id"] == body["task_id"]
 
 
-def test_queued_task_can_be_polled(client):
+def test_queued_task_can_be_polled(client, sd_headers):
     """After queuing, the task status endpoint should return the task details."""
     task = tq.enqueue("process_call", '{"external_call_id": "QUEUE-TEST"}')
-    r = client.get(f"/tasks/{task.id}")
+    r = client.get(f"/tasks/{task.id}", headers=sd_headers)
     assert r.status_code == 200
     data = r.json()
     assert data["task_id"] == task.id

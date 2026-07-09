@@ -36,9 +36,37 @@ def advisor(db):
     advisor = db.query(Advisor).first()
     if advisor:
         return advisor
-    raise RuntimeError("No advisors in DB — run main.py first to seed the DB")
+    raise RuntimeError("No advisors in DB — run seed_data.py first")
 
 
 @pytest.fixture
 def sample_call_audio() -> bytes:
     return b"Advisor: Hello this is a test call.\nCustomer: Hi, I'm interested in your program."
+
+
+# ── Auth token fixtures ────────────────────────────────────────────────
+
+def _login(email: str, password: str) -> dict:
+    c = TestClient(app)
+    r = c.post("/auth/login", json={"email": email, "password": password})
+    assert r.status_code == 200, f"Login failed for {email}: {r.text}"
+    token = r.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def sd_headers():
+    """Sales Director auth headers."""
+    return _login("director@fitnova.in", "admin123")
+
+
+@pytest.fixture
+def tl_headers():
+    """Team Leader (Alpha Pod) auth headers."""
+    return _login("alpha_lead@fitnova.in", "lead123")
+
+
+@pytest.fixture
+def advisor_headers():
+    """Advisor (Priya Sharma) auth headers."""
+    return _login("priya@fitnova.in", "advisor123")

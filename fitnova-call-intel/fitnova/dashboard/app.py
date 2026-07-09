@@ -2,6 +2,7 @@
 
 Three role views: Sales Director, Team Leader, Advisor.
 Handles queue polling for async process-call tasks.
+Includes JWT-based login flow.
 """
 
 import os
@@ -22,12 +23,26 @@ st.set_page_config(page_title="FitNova Call Intelligence", layout="wide")
 if "pending_tasks" not in st.session_state:
     st.session_state.pending_tasks = {}
 
+_HEADERS = {"Cache-Control": "no-cache"} if st.sidebar.checkbox("Bypass cache", value=False, key="raw_cache") else {}
 
-# ── Helpers ────────────────────────────────────────────────────────────
+
+# ── Auth helpers ───────────────────────────────────────────────────────
+
+def _auth_headers() -> dict:
+    token = st.session_state.get("token")
+    h = dict(_HEADERS)
+    if token:
+        h["Authorization"] = f"Bearer {token}"
+    return h
+
 
 def api_get(path: str) -> dict | None:
     try:
-        r = requests.get(f"{API_BASE}{path}", timeout=10)
+        r = requests.get(f"{API_BASE}{path}", headers=_auth_headers(), timeout=10)
+        if r.status_code == 401:
+            st.session_state.pop("token", None)
+            st.session_state.pop("user", None)
+            st.rerun()
         r.raise_for_status()
         data = r.json()
         data["_cached"] = r.elapsed.total_seconds() < 0.05
@@ -39,7 +54,11 @@ def api_get(path: str) -> dict | None:
 
 def api_post(path: str, json_body: dict | None = None) -> dict | None:
     try:
-        r = requests.post(f"{API_BASE}{path}", json=json_body or {}, timeout=30)
+        r = requests.post(f"{API_BASE}{path}", json=json_body or {}, headers=_auth_headers(), timeout=30)
+        if r.status_code == 401:
+            st.session_state.pop("token", None)
+            st.session_state.pop("user", None)
+            st.rerun()
         if r.status_code == 202:
             task = r.json()
             st.session_state.pending_tasks[task["task_id"]] = {
@@ -56,9 +75,12 @@ def api_post(path: str, json_body: dict | None = None) -> dict | None:
 
 
 def api_post_contest(path: str, json_body: dict | None = None) -> dict | None:
-    """Contest endpoint POST — doesn't use queue."""
     try:
-        r = requests.post(f"{API_BASE}{path}", json=json_body or {}, timeout=10)
+        r = requests.post(f"{API_BASE}{path}", json=json_body or {}, headers=_auth_headers(), timeout=10)
+        if r.status_code == 401:
+            st.session_state.pop("token", None)
+            st.session_state.pop("user", None)
+            st.rerun()
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -75,10 +97,9 @@ def fmt(val) -> str:
 
 
 def poll_pending_tasks():
-    """Check on any queued tasks and update UI."""
     done = []
     for tid, info in st.session_state.pending_tasks.items():
-        r = requests.get(f"{API_BASE}/tasks/{tid}", timeout=5)
+        r = requests.get(f"{API_BASE}/tasks/{tid}", headers=_auth_headers(), timeout=5)
         if r.status_code == 200:
             status = r.json().get("status")
             if status == "done":
@@ -93,10 +114,43 @@ def poll_pending_tasks():
         st.rerun()
 
 
+# ── Login screen ───────────────────────────────────────────────────────
+
+if "token" not in st.session_state:
+    st.title("FitNova Call Intelligence")
+    st.markdown("Please log in to continue.")
+    with st.form("login"):
+        email = st.text_input("Email", placeholder="director@fitnova.in")
+        password = st.text_input("Password", type="password", placeholder="admin123")
+        submitted = st.form_submit_button("Log in")
+        if submitted:
+            try:
+                r = requests.post(f"{API_BASE}/auth/login", json={"email": email, "password": password}, timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    st.session_state.token = data["access_token"]
+                    st.session_state.user = data["user"]
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password")
+            except Exception as e:
+                st.error(f"Could not reach API: {e}")
+    st.stop()
+
+
 # ── Sidebar ────────────────────────────────────────────────────────────
 
+user_info = st.session_state.get("user", {})
+role = user_info.get("role", "unknown")
+user_name = user_info.get("name", "User")
+
 st.sidebar.title("FitNova IQ")
-role = st.sidebar.radio("View as", ["Sales Director", "Team Leader", "Advisor"])
+st.sidebar.markdown(f"**{user_name}** ({role.replace('_', ' ').title()})")
+
+if st.sidebar.button("Log out"):
+    st.session_state.pop("token", None)
+    st.session_state.pop("user", None)
+    st.rerun()
 
 st.sidebar.divider()
 st.sidebar.subheader("Call Processing")
@@ -105,8 +159,6 @@ if st.session_state.pending_tasks:
     st.sidebar.warning(f"⏳ {len(st.session_state.pending_tasks)} queued task(s)")
     if st.sidebar.button("Poll queue"):
         poll_pending_tasks()
-
-raw_cache = st.sidebar.checkbox("Bypass cache", value=False)
 
 if st.sidebar.button("Process new calls"):
     source = api_get("/incoming/list")
@@ -125,9 +177,8 @@ if st.sidebar.button("Process new calls"):
 
 st.sidebar.divider()
 if st.sidebar.button("Clear cache"):
-    import requests as r2
     try:
-        r2.get(f"{API_BASE}/health", timeout=5)
+        requests.get(f"{API_BASE}/health", headers=_auth_headers(), timeout=5)
         st.sidebar.success("Cache cleared")
         st.rerun()
     except Exception:
@@ -136,12 +187,14 @@ if st.sidebar.button("Clear cache"):
 
 # ── Views ──────────────────────────────────────────────────────────────
 
-bypass_headers = {"Cache-Control": "no-cache"} if raw_cache else {}
+org_id = user_info.get("org_id", 1)
+team_id = user_info.get("team_id")
+advisor_id = user_info.get("advisor_id")
 
-if role == "Sales Director":
+if role == "sales_director":
     st.title("Org-Wide Overview")
 
-    org = api_get("/orgs/1/summary")
+    org = api_get(f"/orgs/{org_id}/summary")
     if org:
         avg = org.get("averages", {})
         overall = fmt(avg.get("overall"))
@@ -182,24 +235,8 @@ if role == "Sales Director":
             st.dataframe(pd.DataFrame(tags_data), use_container_width=True, hide_index=True)
 
 
-elif role == "Team Leader":
+elif role == "team_leader":
     st.title("Team View")
-
-    org = api_get("/orgs/1/summary")
-    team_names = [t["name"] for t in (org or {}).get("teams", [])]
-    if not team_names:
-        st.warning("No teams found.")
-        st.stop()
-
-    selected = st.selectbox("Select Team", team_names)
-    team_id = None
-    for t in (org or {}).get("teams", []):
-        if t["name"] == selected:
-            team_id = t["id"]
-            break
-
-    if not team_id:
-        st.stop()
 
     team = api_get(f"/teams/{team_id}/summary")
     if not team:
@@ -238,29 +275,8 @@ elif role == "Team Leader":
                             st.rerun()
 
 
-elif role == "Advisor":
+elif role == "advisor":
     st.title("Advisor View")
-
-    org = api_get("/orgs/1/summary")
-    advisor_list = []
-    for t in (org or {}).get("teams", []):
-        for a in t.get("advisors", []):
-            advisor_list.append((a["name"], a["id"]))
-
-    if not advisor_list:
-        st.warning("No advisors found.")
-        st.stop()
-
-    adv_names = [a[0] for a in advisor_list]
-    selected = st.selectbox("Select Advisor", adv_names)
-    advisor_id = None
-    for name, aid in advisor_list:
-        if name == selected:
-            advisor_id = aid
-            break
-
-    if not advisor_id:
-        st.stop()
 
     summary = api_get(f"/advisors/{advisor_id}/summary")
     if not summary:

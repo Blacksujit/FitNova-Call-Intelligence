@@ -2,7 +2,7 @@
 
 import json
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 
 from fitnova.storage.db import get_session, get_advisor_average, get_team_average, get_org_average
@@ -15,11 +15,14 @@ from fitnova.ingestion.folder_source import FolderSource
 from .ratelimit import RateLimitMiddleware
 from . import queue as task_queue
 from . import cache as response_cache
+from .auth import router as auth_router
+from .dependencies import get_current_user, can_access_org, can_access_team, can_access_advisor, can_access_call
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="FitNova Call Intelligence", version="1.1.0")
+app = FastAPI(title="FitNova Call Intelligence", version="1.2.0")
 app.add_middleware(RateLimitMiddleware)
+app.include_router(auth_router)
 
 
 # ── Schemas ────────────────────────────────────────────────────────────
@@ -59,14 +62,14 @@ def health():
 
 
 @app.get("/incoming/list")
-def list_incoming():
+def list_incoming(current_user: dict = Depends(get_current_user)):
     source = FolderSource("fitnova/data/incoming")
     calls = source.fetch_new_calls()
     return {"incoming_ids": [c.external_call_id for c in calls]}
 
 
 @app.post("/calls/process", response_model=ProcessResponse)
-def process_call_endpoint(external_call_id: str):
+def process_call_endpoint(external_call_id: str, current_user: dict = Depends(get_current_user)):
     """
     Process a call synchronously (fast path — used when rate limit allows).
     When rate-limited, the middleware intercepts and returns 202 queued instead.
@@ -106,7 +109,7 @@ def process_call_endpoint(external_call_id: str):
 
 
 @app.get("/tasks/{task_id}")
-def get_task_status(task_id: str):
+def get_task_status(task_id: str, current_user: dict = Depends(get_current_user)):
     """Poll the status of an async queued task."""
     task = task_queue.get_task(task_id)
     if not task:
@@ -122,17 +125,20 @@ def get_task_status(task_id: str):
 
 
 @app.get("/calls/{call_id}", response_model=CallDetail)
-def get_call_detail(call_id: int):
-    cache_key = f"call_detail:{call_id}"
-    cached = response_cache.cache_get(cache_key)
-    if cached:
-        return CallDetail(**cached)
-
+def get_call_detail(call_id: int, current_user: dict = Depends(get_current_user)):
     db = get_session()
     try:
         call = db.query(Call).filter(Call.id == call_id).first()
         if not call:
             raise HTTPException(status_code=404, detail="Call not found")
+        if not can_access_call(current_user, call_id):
+            raise HTTPException(status_code=403, detail="Not authorized to view this call")
+
+        cache_key = f"call_detail:{call_id}"
+        cached = response_cache.cache_get(cache_key)
+        if cached:
+            return CallDetail(**cached)
+
         result = CallDetail(
             id=call.id,
             external_call_id=call.external_call_id,
@@ -151,20 +157,25 @@ def get_call_detail(call_id: int):
 
 
 @app.get("/orgs/{org_id}/summary")
-def org_summary(org_id: int):
-    cache_key = f"org_summary:{org_id}"
-    cached = response_cache.cache_get(cache_key)
-    if cached:
-        return cached
-
+def org_summary(org_id: int, current_user: dict = Depends(get_current_user)):
     db = get_session()
     try:
         org = db.query(Org).filter(Org.id == org_id).first()
         if not org:
             raise HTTPException(status_code=404)
+        if not can_access_org(current_user, org_id):
+            raise HTTPException(status_code=403, detail="Not authorized to view this org")
+
+        cache_key = f"org_summary:{org_id}"
+        cached = response_cache.cache_get(cache_key)
+        if cached:
+            return cached
+
         averages = get_org_average(org_id)
         teams = []
         for t in org.teams:
+            if current_user["role"] == "team_leader" and t.id != current_user.get("team_id"):
+                continue
             teams.append({"id": t.id, "name": t.name, "averages": get_team_average(t.id)})
         result = {"org": org.name, "averages": averages, "teams": teams}
         response_cache.cache_set(cache_key, result, ttl=30)
@@ -174,20 +185,24 @@ def org_summary(org_id: int):
 
 
 @app.get("/teams/{team_id}/summary")
-def team_summary(team_id: int):
-    cache_key = f"team_summary:{team_id}"
-    cached = response_cache.cache_get(cache_key)
-    if cached:
-        return cached
-
+def team_summary(team_id: int, current_user: dict = Depends(get_current_user)):
     db = get_session()
     try:
         team = db.query(Team).filter(Team.id == team_id).first()
         if not team:
             raise HTTPException(status_code=404)
+        if not can_access_team(current_user, team_id):
+            raise HTTPException(status_code=403, detail="Not authorized to view this team")
+
+        cache_key = f"team_summary:{team_id}"
+        cached = response_cache.cache_get(cache_key)
+        if cached:
+            return cached
         averages = get_team_average(team_id)
         advisors = []
         for a in team.advisors:
+            if current_user["role"] == "advisor" and a.id != current_user.get("advisor_id"):
+                continue
             advisors.append({"id": a.id, "name": a.name, "averages": get_advisor_average(a.id)})
         result = {"team": team.name, "averages": averages, "advisors": advisors}
         response_cache.cache_set(cache_key, result, ttl=30)
@@ -197,7 +212,10 @@ def team_summary(team_id: int):
 
 
 @app.get("/advisors/{advisor_id}/summary")
-def advisor_summary(advisor_id: int):
+def advisor_summary(advisor_id: int, current_user: dict = Depends(get_current_user)):
+    if not can_access_advisor(current_user, advisor_id):
+        raise HTTPException(status_code=403, detail="Not authorized to view this advisor")
+
     cache_key = f"advisor_summary:{advisor_id}"
     cached = response_cache.cache_get(cache_key)
     if cached:
@@ -223,16 +241,26 @@ def advisor_summary(advisor_id: int):
 
 
 @app.post("/tags/{tag_id}/contest")
-def contest_tag(tag_id: int, body: ContestRequest):
+def contest_tag(tag_id: int, body: ContestRequest, current_user: dict = Depends(get_current_user)):
     db = get_session()
     try:
         tag = db.query(Tag).filter(Tag.id == tag_id).first()
         if not tag:
             raise HTTPException(status_code=404, detail="Tag not found")
+        if current_user["role"] not in ("advisor", "team_leader"):
+            raise HTTPException(status_code=403, detail="Only advisors and team leaders can contest tags")
+
+        if current_user["role"] == "advisor" and tag.call.advisor_id != current_user.get("advisor_id"):
+            raise HTTPException(status_code=403, detail="Can only contest tags on your own calls")
+
+        if current_user["role"] == "team_leader":
+            call_advisor = db.query(Advisor).filter(Advisor.id == tag.call.advisor_id).first()
+            if not call_advisor or call_advisor.team_id != current_user.get("team_id"):
+                raise HTTPException(status_code=403, detail="Can only contest tags in your team")
+
         tag.status = TagStatus.contested.value
         db.add(Contest(tag_id=tag.id, advisor_comment=body.advisor_comment))
         db.commit()
-        # Invalidate caches that may include this tag
         response_cache.cache_invalidate("call_detail")
         response_cache.cache_invalidate("org_summary")
         return {"status": "contested", "tag_id": tag_id}

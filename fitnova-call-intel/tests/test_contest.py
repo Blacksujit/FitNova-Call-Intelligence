@@ -1,65 +1,74 @@
-"""Flag contest workflow tests — covers the feedback loop."""
+"""Flag contest workflow tests — covers the feedback loop with auth."""
 
+import pytest
+from fastapi.testclient import TestClient
+from fitnova.api.main import app
 from fitnova.storage.models import Tag, TagStatus, Contest, Call
 from fitnova.pipeline.orchestrator import process_call as run_pipeline
 
 
-def test_contest_requires_comment(client, db):
-    """POST without body should 422."""
-    r = client.post("/tags/1/contest", json={})
+def _ensure_tag(db, advisor, call_id="CONTEST-FIXTURE-001"):
+    """Process a call and return the first tag."""
+    audio = b"Advisor: I guaranteed you will lose weight fast. " + call_id.encode()
+    call = db.query(Call).filter(Call.external_call_id == call_id).first()
+    if not call:
+        run_pipeline(call_id, advisor.id, "test", audio, db)
+    tag = db.query(Tag).join(Call).filter(Call.external_call_id == call_id).first()
+    return tag
+
+
+def test_contest_requires_comment(client, db, advisor, sd_headers):
+    """POST with empty body should 422 (Pydantic validation before endpoint)."""
+    tag = _ensure_tag(db, advisor)
+    r = client.post(f"/tags/{tag.id}/contest", json={}, headers=sd_headers)
     assert r.status_code == 422
 
 
-def test_contest_nonexistent_tag_returns_404(client):
-    r = client.post("/tags/99999/contest", json={"advisor_comment": "Wrong!"})
+def test_contest_nonexistent_tag_returns_404(client, sd_headers):
+    r = client.post("/tags/99999/contest", json={"advisor_comment": "Wrong!"}, headers=sd_headers)
     assert r.status_code == 404
 
 
-def test_contest_workflow_full_cycle(client, db, advisor):
-    """Full contest cycle: create tag → contest → verify status change."""
-    # Use trigger phrases for the stub tagger: "guaranteed" + "won't be available"
-    audio = b"Advisor: I guaranteed you will lose weight fast.\nAdvisor: This offer won't be available tomorrow."
-    run_pipeline("TEST-CONTEST-001", advisor.id, "test", audio, db)
+@pytest.fixture
+def tl_headers_inline():
+    """Team Leader auth headers — used for contest operations."""
+    c = TestClient(app)
+    r = c.post("/auth/login", json={"email": "alpha_lead@fitnova.in", "password": "lead123"})
+    assert r.status_code == 200
+    token = r.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
-    call = db.query(Call).filter(Call.external_call_id == "TEST-CONTEST-001").first()
-    tag = db.query(Tag).filter(Tag.call_id == call.id).first()
-    assert tag is not None
+
+def test_contest_workflow_full_cycle(client, db, advisor, tl_headers_inline):
+    """Full contest cycle: create tag → contest → verify status change."""
+    tag = _ensure_tag(db, advisor, "CONTEST-CYCLE-001")
     assert tag.status == TagStatus.active.value
 
-    # Contest the tag
-    r = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "This is not a violation."})
+    r = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "This is not a violation."}, headers=tl_headers_inline)
     assert r.status_code == 200
     assert r.json()["status"] == "contested"
     assert r.json()["tag_id"] == tag.id
 
-    # Verify DB updated
     db.expire(tag)
     assert tag.status == TagStatus.contested.value
 
-    # Verify Contest row created
     contest = db.query(Contest).filter(Contest.tag_id == tag.id).first()
     assert contest is not None
     assert "not a violation" in contest.advisor_comment
 
 
-def test_contest_with_empty_comment(client, db):
-    """Empty comment should still create a contest (advisors may not elaborate)."""
-    r = client.post("/tags/1/contest", json={"advisor_comment": ""})
-    # Should still work — we don't enforce non-empty
+def test_contest_with_empty_comment(client, db, advisor, tl_headers_inline):
+    """Empty comment should still work (advisors may not elaborate)."""
+    tag = _ensure_tag(db, advisor, "CONTEST-EMPTY-001")
+    r = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": ""}, headers=tl_headers_inline)
     assert r.status_code in (200, 422)
 
 
-def test_multiple_contests_on_same_tag(client, db, advisor):
-    """Contesting an already-contested tag should update the status again (idempotent)."""
-    # Use trigger phrase "limited time" for pressure_tactics tag
-    audio = b"Advisor: This limited time offer expires today.\nCustomer: Can you tell me more?"
-    run_pipeline("TEST-MULTI-CONTEST", advisor.id, "test", audio, db)
-    call = db.query(Call).filter(Call.external_call_id == "TEST-MULTI-CONTEST").first()
-    tag = db.query(Tag).filter(Tag.call_id == call.id).first()
-
-    r1 = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "First contest"})
+def test_multiple_contests_on_same_tag(client, db, advisor, tl_headers_inline):
+    """Contesting an already-contested tag updates status again (idempotent)."""
+    tag = _ensure_tag(db, advisor, "CONTEST-MULTI-001")
+    r1 = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "First contest"}, headers=tl_headers_inline)
     assert r1.status_code == 200
-
-    r2 = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "Second contest"})
+    r2 = client.post(f"/tags/{tag.id}/contest", json={"advisor_comment": "Second contest"}, headers=tl_headers_inline)
     assert r2.status_code == 200
     assert r2.json()["status"] == "contested"
