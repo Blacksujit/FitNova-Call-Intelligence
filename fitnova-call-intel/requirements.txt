@@ -18,3 +18,7 @@ spacy>=3.8.0
 google-genai>=1.0.0
 # Local analysis via Ollama (free, open-source). Needs ollama running.
 #   pip install openai
+# Netlify serverless adapter
+mangum>=0.21.0
+# PostgreSQL for production
+psycopg2-binary>=2.9.9

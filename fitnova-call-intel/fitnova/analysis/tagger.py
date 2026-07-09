@@ -10,7 +10,7 @@ from .rubric import DIMENSIONS, ALLOWED_TAGS, SEVERITY_LEVELS
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# ── System prompt for Claude ───────────────────────────────────────────
+# ── System prompt for Claude ─────────────────────────────────────────
 
 SYSTEM_PROMPT = """You are a quality analyst for a fitness coaching sales team.
 Analyze the sales call transcript below and produce a structured evaluation.
@@ -146,7 +146,7 @@ def _verify_quotes_in_transcript(transcript_text: str, tags: list[dict]) -> list
     return verified
 
 
-# ── Public API ─────────────────────────────────────────────────────────
+# ── Public API ─────────────────────────────────────────────────
 
 def analyze_call(segments: list[dict], call_id: str) -> dict:
     """
@@ -160,7 +160,7 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
     """
     transcript_text = _build_transcript_text(segments)
 
-    # ── Try Anthropic ───────────────────────────────────────────────────
+    # ── Try Anthropic ─────────────────────────────────────────────
     anthro_key = os.getenv("ANTHROPIC_API_KEY", "")
     if anthro_key:
         try:
@@ -168,7 +168,7 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
         except Exception as exc:
             logger.warning("Anthropic failed (%s), trying next option.", exc)
 
-    # ── Try OpenAI ──────────────────────────────────────────────────────
+    # ── Try OpenAI ─────────────────────────────────────────────
     openai_key = os.getenv("OPENAI_API_KEY", "")
     if openai_key:
         try:
@@ -176,7 +176,7 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
         except Exception as exc:
             logger.warning("OpenAI failed (%s), trying next option.", exc)
 
-    # ── Try Gemini ──────────────────────────────────────────────────────
+    # ── Try Gemini ────────────────────────────────────────────
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if gemini_key:
         try:
@@ -184,7 +184,7 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
         except Exception as exc:
             logger.warning("Gemini failed (%s), trying next option.", exc)
 
-    # ── Try Ollama ──────────────────────────────────────────────────────
+    # ── Try Ollama ────────────────────────────────────────────
     ollama_url = os.getenv("OLLAMA_BASE_URL", "")
     if ollama_url:
         try:
@@ -192,7 +192,7 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
         except Exception as exc:
             logger.warning("Ollama failed (%s), falling back to stub.", exc)
 
-    # ── Fallback ────────────────────────────────────────────────────────
+    # ── Fallback ───────────────────────────────────────────────
     logger.warning("No AI provider available — using stub analysis.")
     return _stub_analysis(segments)
 
@@ -285,22 +285,88 @@ def _analyze_with_ollama(transcript_text: str, base_url: str) -> dict:
     model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
     client = OpenAI(base_url=f"{base_url.rstrip('/')}/v1", api_key="ollama")
 
+    mini_prompt = (
+        "Analyze this call transcript. Return ONLY valid JSON with these fields:\n"
+        '- "is_sales_call": true/false,\n'
+        '- "scores": [{"dimension": "score_name", "value": 1-10}, ...],\n'
+        '- "tags": [{"category": "tag_name", "severity": "low"/"medium"/"high", "quoted_line": "exact quote from transcript"}, ...]\n\n'
+        "Transcript:\n" + transcript_text
+    )
+
     response = client.chat.completions.create(
         model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": transcript_text},
-        ],
-        tools=_build_openai_tools(),
-        tool_choice={"type": "function", "function": {"name": "submit_call_analysis"}},
+        messages=[{"role": "user", "content": mini_prompt}],
         temperature=0,
     )
 
-    msg = response.choices[0].message
-    if not msg.tool_calls:
-        raise RuntimeError(f"Ollama/{model} did not return a tool call.")
+    content = response.choices[0].message.content or ""
 
-    tool_block = json.loads(msg.tool_calls[0].function.arguments)
+    import re as _re2
+
+    m = _re2.search(r"\{.*\}", content, _re2.DOTALL)
+    if not m:
+        raise RuntimeError(f"Ollama/{model} returned no JSON block.")
+
+    cleaned = m.group(0)
+    cleaned = cleaned.replace("\\'", "'")
+    cleaned = _re2.sub(r"\bTrue\b", "true", cleaned)
+    cleaned = _re2.sub(r"\bFalse\b", "false", cleaned)
+    cleaned = _re2.sub(r",\s*}", "}", cleaned)
+    cleaned = _re2.sub(r",\s*]", "]", cleaned)
+
+    try:
+        tool_block = json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Model may have used single-quoted keys/values — try converting
+        # only single-quoted patterns that appear as JSON delimiters,
+        # not apostrophes inside double-quoted string values.
+        cleaned_sq = _re2.sub(r"(?<=[{,])'([^']+)':", r'"\1":', cleaned)
+        cleaned_sq = _re2.sub(r":\s*'([^']+)'([,\]}])", r': "\1"\2', cleaned_sq)
+        tool_block = json.loads(cleaned_sq)
+
+    is_sales = tool_block.get("is_sales_call")
+    if isinstance(is_sales, str):
+        tool_block["is_sales_call"] = is_sales.lower() in ("true", "yes", "1")
+
+    import re as _re
+
+    for key in ("scores", "tags"):
+        val = tool_block.get(key)
+        if isinstance(val, str):
+            val = val.replace("'", '"')
+            try:
+                tool_block[key] = json.loads(val)
+            except json.JSONDecodeError:
+                if key == "scores":
+                    matches = _re.findall(r"'dimension'\s*:\s*'([^']+)'[^}]*'value'\s*:\s*(\d+)", val)
+                    tool_block[key] = [{"name": m[0], "score": int(m[1])} for m in matches] if matches else []
+                else:
+                    tool_block[key] = []
+
+    import re as _int_re
+
+    scores = tool_block.get("scores", [])
+    normalized = []
+    for s in scores:
+        if isinstance(s, dict):
+            dim = s.get("dimension") or s.get("name") or ""
+            raw = s.get("value") or s.get("score") or 3
+            try:
+                parsed = int(raw)
+            except (ValueError, TypeError):
+                m = _int_re.search(r"\d+", str(raw))
+                parsed = int(m.group()) if m else 3
+            normalized.append({"dimension": dim, "value": max(1, min(5, parsed))})
+    tool_block["scores"] = normalized
+
+    tags = tool_block.get("tags", [])
+    normalized_tags = []
+    for t in tags:
+        if isinstance(t, dict):
+            t["severity"] = t.get("severity", "medium")
+            normalized_tags.append(t)
+    tool_block["tags"] = normalized_tags
+
     return _verify_and_return(transcript_text, tool_block)
 
 
@@ -345,7 +411,28 @@ def _stub_analysis(segments: list[dict]) -> dict:
     transcript_text = _build_transcript_text(segments)
     text_lower = transcript_text.lower()
 
-    # ── Scoring — simple rules ─────────────────────────────────────────
+    # ── Non-sales call detection ───────────────────────────────
+    non_sales_keywords = [
+        "once upon a time", "fairy tale", "long, long ago",
+        "and they lived happily", "the end", "moral of the story",
+        "chapter", "read aloud", "story time",
+    ]
+    is_non_sales = any(p in text_lower for p in non_sales_keywords)
+
+    unique_speakers = set(s.get("speaker", "") for s in segments)
+    total_duration_ms = max((s.get("end_ms", 0) for s in segments), default=0)
+    has_greeting = any(p in text_lower for p in ["hello", "namaste", "hi this"])
+    has_fitnova = any(p in text_lower for p in ["fitnova", "fit nova", "coaching", "trial session", "premium plan", "diet plan"])
+
+    if is_non_sales or (not has_fitnova and total_duration_ms < 10000):
+        return {
+            "is_sales_call": False,
+            "reason": "Non-sales content detected (story/other).",
+            "scores": [],
+            "tags": [],
+        }
+
+    # ── Scoring — simple rules ─────────────────────────────────────
     has_discovery = any(p in text_lower for p in ["goal", "budget", "timeline", "commit", "experience", "tell me about", "kya", "kaise", "kab"])
     has_compliance_issue = any(p in text_lower for p in ["guaranteed", "100%", "never had a client", "guarantee"])
     has_pressure = any(p in text_lower for p in ["won't be available", "expires today", "act now", "limited time", "last chance"])
@@ -365,7 +452,7 @@ def _stub_analysis(segments: list[dict]) -> dict:
          "justification": "Trial booked." if has_booking else "No trial session booked."},
     ]
 
-    # ── Tagging — find first matching segment ──────────────────────────
+    # ── Tagging — find first matching segment ─────────────────────────────
     tags = []
 
     for seg in segments:

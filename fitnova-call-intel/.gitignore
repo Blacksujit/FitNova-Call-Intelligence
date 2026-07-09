@@ -1,4 +1,4 @@
-# ── Python ────────────────────────────────────────────────────────────
+# ── Python ──────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
@@ -8,14 +8,14 @@ build/
 *.egg
 *.whl
 
-# ── Environment ───────────────────────────────────────────────────────
+# ── Environment ──────────────────────────────────────
 .env
 .venv/
 venv/
 env/
 *.env.local
 
-# ── IDE / Editor ──────────────────────────────────────────────────────
+# ── IDE / Editor ────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -24,7 +24,7 @@ env/
 .DS_Store
 Thumbs.db
 
-# ── Testing ───────────────────────────────────────────────────────────
+# ── Testing ──────────────────────────────────────
 .pytest_cache/
 htmlcov/
 .coverage
@@ -32,7 +32,7 @@ htmlcov/
 coverage.xml
 *.cover
 
-# ── Data files (auto-generated) ───────────────────────────────────────
+# ── Data files (auto-generated) ───────────────────────
 fitnova/data/*.db
 fitnova/data/*.db-journal
 fitnova/data/*.db-wal
@@ -42,17 +42,18 @@ fitnova/data/incoming/*.wav
 fitnova/data/incoming/*.json
 !fitnova/data/incoming/.gitkeep
 
-# ── Pipeline task queue ───────────────────────────────────────────────
+# ── Pipeline task queue ──────────────────────────
 fitnova/data/task_queue.db
 
-# ── Streamlit secrets ─────────────────────────────────────────────────
-.streamlit/
+# ── Streamlit secrets ─────────────────────────
+.streamlit/secrets.toml
+.streamlit/*.local.toml
 
-# ── Logs ──────────────────────────────────────────────────────────────
+# ── Logs ───────────────────────────────────
 *.log
 logs/
 
-# ── Git ───────────────────────────────────────────────────────────────
+# ── Git ────────────────────────────────────
 .gitattributes
 
 

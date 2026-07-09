@@ -1,3 +1,14 @@
+---
+title: FitNova Call Intelligence
+emoji: 📞
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: 1.37.0
+app_file: fitnova/dashboard/app.py
+pinned: false
+---
+
 # FitNova Call Intelligence System
 
 AI system that automatically transcribes, scores, and flags issues in sales calls for FitNova's fitness coaching tele-advisors. Built from scratch — ingestion → transcription → PII redaction → AI analysis → storage → dashboard → feedback loop.
@@ -53,46 +64,46 @@ ANTHROPIC_API_KEY=sk-ant-...
 Incoming Call (MP3/WAV + JSON metadata)
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  1. Ingestion  (folder_source.py / adapter ABC)  │
 │     Reads data/incoming/ — source-agnostic       │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  2. Transcription  (transcribe.py)               │
 │     AssemblyAI  →  faster-whisper  →  stub       │
 │     PII redaction (regex + spaCy NER)            │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  3. Analysis  (tagger.py)                        │
 │     Anthropic  →  OpenAI  →  Gemini  →  stub     │
 │     5 scoring dimensions + 7 tag types           │
 │     Hallucination guardrail (verbatim quotes)    │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  4. Storage  (SQLite + SQLAlchemy ORM)           │
 │     Org → Team → Advisor → Call → Segments       │
 │                                → Scores          │
 │                                → Tags → Contests │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  5. Surfacing  (FastAPI + Streamlit)              │
 │     REST API (12 endpoints, JWT auth)            │
 │     Dashboard (Sales Director / TL / Advisor)    │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
     │
     ▼
-┌──────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────┐
 │  6. Feedback  (contest workflow)                  │
 │     Advisor contests → TL reviews → dismisses    │
-└──────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
 ```
 
 ## What's Real vs Simulated

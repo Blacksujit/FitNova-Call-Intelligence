@@ -40,7 +40,7 @@ def process_call(
         segments = transcribe_and_diarize(audio_bytes, external_call_id)
         call.status = CallStatus.transcribed.value
 
-        # ── Step 1b: PII Redaction ──────────────────────────────────────
+        # ── Step 1b: PII Redaction ───────────────────────────────
         redact_segments(segments)
 
         all_known = True
@@ -57,7 +57,7 @@ def process_call(
         call.diarization_quality = "ok" if all_known else "failed"
         db.commit()
 
-        # ── Step 2: Analyze ─────────────────────────────────────────────
+        # ── Step 2: Analyze ──────────────────────────────────────
         analysis = analyze_call(segments, external_call_id)
 
         # Redact PII from analysis results too
@@ -76,7 +76,7 @@ def process_call(
             db.add(Tag(
                 call_id=call.id,
                 category=tg["category"],
-                severity=tg["severity"],
+                severity=tg.get("severity", "medium"),
                 timestamp_ms=tg.get("timestamp_ms"),
                 quoted_line=tg.get("quoted_line"),
                 reason=tg.get("reason"),

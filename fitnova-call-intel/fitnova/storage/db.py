@@ -5,7 +5,11 @@ from .models import Base, Org, Team, Advisor, Call, Segment, Score, Tag, Contest
 
 DATABASE_URL = os.getenv("FITNOVA_DATABASE_URL", "sqlite:///fitnova/data/fitnova.db")
 
-engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+_connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    _connect_args["check_same_thread"] = False
+
+engine = create_engine(DATABASE_URL, echo=False, connect_args=_connect_args or None)
 SessionLocal = sessionmaker(bind=engine)
 
 _test_engine = None
@@ -36,7 +40,7 @@ def get_session() -> Session:
     return SessionLocal()
 
 
-# ── Aggregation helpers ────────────────────────────────────────────────
+# ── Aggregation helpers ─────────────────────────────────────────
 
 def _average_scores(session: Session, call_ids: list[int]) -> dict:
     if not call_ids:
