@@ -56,4 +56,5 @@ logs/
 .gitattributes
 
 
-AI_Engineer_Intern_Assignment_1.pdf
+# Ignore the assignment PDF (use leading slash to match repository root)
+/AI_Engineer_Intern_Assignment_1.pdf
