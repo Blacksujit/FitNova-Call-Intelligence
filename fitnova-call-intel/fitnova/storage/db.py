@@ -1,18 +1,38 @@
+import os
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
 from .models import Base, Org, Team, Advisor, Call, Segment, Score, Tag, Contest
 
-DATABASE_URL = "sqlite:///fitnova/data/fitnova.db"
+DATABASE_URL = os.getenv("FITNOVA_DATABASE_URL", "sqlite:///fitnova/data/fitnova.db")
 
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 
+_test_engine = None
+_test_SessionLocal = None
 
-def init_db():
-    Base.metadata.create_all(engine)
+
+def init_db(eng=None):
+    target = eng or engine
+    Base.metadata.create_all(target)
+
+
+def set_test_db():
+    global _test_engine, _test_SessionLocal
+    import tempfile, os
+    _test_db_path = os.path.join(tempfile.gettempdir(), f"fitnova_test_{os.getpid()}.db")
+    _test_engine = create_engine(
+        f"sqlite:///{_test_db_path}",
+        connect_args={"check_same_thread": False},
+    )
+    _test_SessionLocal = sessionmaker(bind=_test_engine)
+    Base.metadata.create_all(_test_engine)
+    return _test_engine
 
 
 def get_session() -> Session:
+    if _test_SessionLocal:
+        return _test_SessionLocal()
     return SessionLocal()
 
 

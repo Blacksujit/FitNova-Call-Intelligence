@@ -1,5 +1,5 @@
 """
-Shared fixtures for all test suites.
+Shared fixtures for all test suites — uses in-memory SQLite for isolation.
 """
 
 import sys
@@ -9,14 +9,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 from fastapi.testclient import TestClient
 
-from fitnova.storage.db import get_session
-from fitnova.storage.models import Advisor
+from fitnova.storage.db import set_test_db, get_session
+from fitnova.storage.models import (
+    Base, Org, Team, Advisor, User, Call, Segment, Score, Tag, Contest,
+    TagStatus,
+)
+from fitnova.storage.seed import seed_data, seed_users
 from fitnova.api.main import app
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _test_db():
+    set_test_db()
+    seed_data()
+    seed_users()
 
 
 @pytest.fixture

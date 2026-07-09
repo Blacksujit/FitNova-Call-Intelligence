@@ -7,6 +7,7 @@ from fitnova.storage.models import Call, Segment, Score, Tag, CallStatus
 from fitnova.pipeline.idempotency import compute_audio_hash, is_already_processed
 from fitnova.pipeline.transcribe import transcribe_and_diarize
 from fitnova.analysis.tagger import analyze_call
+from fitnova.analysis.redactor import redact_segments, redact_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,9 @@ def process_call(
         segments = transcribe_and_diarize(audio_bytes, external_call_id)
         call.status = CallStatus.transcribed.value
 
+        # ── Step 1b: PII Redaction ──────────────────────────────────────
+        redact_segments(segments)
+
         all_known = True
         for seg in segments:
             if seg["speaker"] == "unknown":
@@ -55,6 +59,9 @@ def process_call(
 
         # ── Step 2: Analyze ─────────────────────────────────────────────
         analysis = analyze_call(segments, external_call_id)
+
+        # Redact PII from analysis results too
+        redact_analysis(analysis)
 
         if not analysis.get("is_sales_call", True):
             call.status = CallStatus.non_sales_call.value
