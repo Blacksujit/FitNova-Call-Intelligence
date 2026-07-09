@@ -276,6 +276,20 @@ def api_post(path: str, json_body: dict | None = None) -> dict | None:
         return None
 
 
+def api_upload(path: str, files: dict, data: dict) -> dict | None:
+    try:
+        r = requests.post(f"{API_BASE}{path}", files=files, data=data, headers=_auth_headers(), timeout=120)
+        if r.status_code == 401:
+            st.session_state.pop("token", None)
+            st.session_state.pop("user", None)
+            st.rerun()
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        st.error(f"Upload error: {e}")
+        return None
+
+
 def api_post_contest(path: str, json_body: dict | None = None) -> dict | None:
     try:
         r = requests.post(f"{API_BASE}{path}", json=json_body or {}, headers=_auth_headers(), timeout=10)
@@ -573,6 +587,25 @@ if st.sidebar.button("Log out"):
     st.session_state.pop("token", None)
     st.session_state.pop("user", None)
     st.rerun()
+
+st.sidebar.divider()
+st.sidebar.subheader("Upload Recording")
+
+uploaded = st.sidebar.file_uploader("Choose audio file", type=["wav", "mp3", "ogg", "m4a", "flac"], key="audio_upload")
+upload_email = st.sidebar.text_input("Advisor email", placeholder="priya@fitnova.in", key="upload_email")
+upload_cid = st.sidebar.text_input("Call ID (optional)", placeholder="auto-generated if empty", key="upload_cid")
+if st.sidebar.button("Upload & Process", type="primary"):
+    if not uploaded or not upload_email:
+        st.sidebar.error("File and advisor email required")
+    else:
+        result = api_upload("/calls/upload", files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type)}, data={"advisor_email": upload_email, "external_call_id": upload_cid or ""})
+        if result:
+            cid = result["external_call_id"]
+            st.sidebar.success(f"Uploaded: {cid}")
+            proc = api_post(f"/calls/process?external_call_id={cid}")
+            if proc:
+                st.sidebar.success(f"{cid}: {proc.get('status', 'processing')}")
+                st.rerun()
 
 st.sidebar.divider()
 st.sidebar.subheader("Call Processing")

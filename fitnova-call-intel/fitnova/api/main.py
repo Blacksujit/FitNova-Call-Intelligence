@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
 from fitnova.storage.db import get_session, get_advisor_average, get_team_average, get_org_average
@@ -194,6 +194,34 @@ def startup_seed():
     response_cache.cache_invalidate("advisor_summary")
 
     return {"status": "ok", "results": results}
+
+
+@app.post("/calls/upload")
+async def upload_call(
+    file: UploadFile = File(...),
+    advisor_email: str = Form(...),
+    external_call_id: str = Form(""),
+    current_user: dict = Depends(get_current_user),
+):
+    import uuid, shutil
+    cid = external_call_id.strip() or f"UPLOAD-{uuid.uuid4().hex[:8].upper()}"
+    incoming = Path("fitnova/data/incoming")
+    incoming.mkdir(parents=True, exist_ok=True)
+
+    ext = Path(file.filename).suffix if file.filename else ".wav"
+    audio_name = f"call_{cid}{ext}"
+    audio_path = incoming / audio_name
+    with audio_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    meta = {
+        "external_call_id": cid,
+        "advisor_email": advisor_email,
+        "occurred_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+        "audio_file": audio_name,
+    }
+    (incoming / f"call_{cid}.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return {"status": "ok", "external_call_id": cid}
 
 
 @app.get("/incoming/list")
