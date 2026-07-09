@@ -12,7 +12,7 @@ def test_get_nonexistent_call_returns_404(client, sd_headers):
 def test_get_existing_call_returns_full_detail(client, db, advisor, sd_headers):
     """Full call detail must include id on every tag (regression for dashboard KeyError)."""
     from fitnova.pipeline.orchestrator import process_call as run_pipeline
-    audio = b"Advisor: Let me tell you about our premium plan.\nCustomer: How much does it cost?"
+    audio = b"Advisor: Let me tell you about our premium plan TEST-DETAIL-001.\nCustomer: How much does it cost?"
     result = run_pipeline("TEST-DETAIL-001", advisor.id, "test", audio, db)
     assert result["status"] == "analyzed"
 
