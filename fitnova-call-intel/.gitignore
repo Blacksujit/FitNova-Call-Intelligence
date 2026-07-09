@@ -1,0 +1,56 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# ── Environment ───────────────────────────────────────────────────────
+.env
+.venv/
+venv/
+env/
+*.env.local
+
+# ── IDE / Editor ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Testing ───────────────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ── Data files (auto-generated) ───────────────────────────────────────
+fitnova/data/*.db
+fitnova/data/*.db-journal
+fitnova/data/*.db-wal
+fitnova/data/*.db-shm
+fitnova/data/incoming/*.mp3
+fitnova/data/incoming/*.wav
+fitnova/data/incoming/*.json
+!fitnova/data/incoming/.gitkeep
+
+# ── Pipeline task queue ───────────────────────────────────────────────
+fitnova/data/task_queue.db
+
+# ── Streamlit secrets ─────────────────────────────────────────────────
+.streamlit/
+
+# ── Logs ──────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Git ───────────────────────────────────────────────────────────────
+.gitattributes
