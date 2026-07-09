@@ -9,5 +9,6 @@ pydantic>=2.7.0
 httpx>=0.27.0
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
+plotly>=6.8.0
 # spaCy optional — for NER-based PII redaction (falls back to regex)
 spacy>=3.8.0
