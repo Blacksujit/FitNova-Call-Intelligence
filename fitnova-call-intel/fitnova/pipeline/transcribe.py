@@ -48,10 +48,13 @@ def transcribe_and_diarize(audio_bytes: bytes, call_id: str) -> list[dict]:
 
     api_key = os.getenv("ASSEMBLYAI_API_KEY", "")
     if api_key:
-        segments = _transcribe_assemblyai(audio_bytes, call_id, api_key)
-        if segments:
-            return segments
-        logger.warning("AssemblyAI returned poor diarization (0 utterances), falling back to whisper.")
+        try:
+            segments = _transcribe_assemblyai(audio_bytes, call_id, api_key)
+            if segments:
+                return segments
+            logger.warning("AssemblyAI returned poor diarization (0 utterances), falling back to whisper.")
+        except Exception as exc:
+            logger.warning("AssemblyAI failed (%s), falling back to whisper.", exc)
 
     if _whisper_available():
         return _transcribe_whisper(audio_bytes, call_id)
