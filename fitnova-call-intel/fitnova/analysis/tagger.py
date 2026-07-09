@@ -150,25 +150,58 @@ def _verify_quotes_in_transcript(transcript_text: str, tags: list[dict]) -> list
 
 def analyze_call(segments: list[dict], call_id: str) -> dict:
     """
-    Analyze a transcribed call using Claude structured output.
+    Analyze a transcribed call. Resolution order:
+      1. Anthropic Claude  (if ANTHROPIC_API_KEY set)
+      2. OpenAI            (if OPENAI_API_KEY set, uses gpt-4o-mini)
+      3. Ollama local LLM  (if OLLAMA_BASE_URL set, e.g. http://127.0.0.1:11434)
+      4. Stub analyzer     (deterministic, no API needed)
+
     Returns scores, verified tags, and sales-call classification.
-
-    Falls back to a deterministic stub if ANTHROPIC_API_KEY is not set.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        logger.warning("ANTHROPIC_API_KEY not set — using stub analysis.")
-        return _stub_analysis(segments)
-
-    try:
-        import anthropic
-    except ImportError:
-        logger.warning("anthropic SDK not installed — using stub analysis.")
-        return _stub_analysis(segments)
-
     transcript_text = _build_transcript_text(segments)
-    client = anthropic.Anthropic(api_key=api_key)
 
+    # ── Try Anthropic ───────────────────────────────────────────────────
+    anthro_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if anthro_key:
+        try:
+            return _analyze_with_anthropic(transcript_text)
+        except Exception as exc:
+            logger.warning("Anthropic failed (%s), trying next option.", exc)
+
+    # ── Try OpenAI ──────────────────────────────────────────────────────
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    if openai_key:
+        try:
+            return _analyze_with_openai(transcript_text)
+        except Exception as exc:
+            logger.warning("OpenAI failed (%s), trying next option.", exc)
+
+    # ── Try Gemini ──────────────────────────────────────────────────────
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if gemini_key:
+        try:
+            return _analyze_with_gemini(transcript_text, gemini_key)
+        except Exception as exc:
+            logger.warning("Gemini failed (%s), trying next option.", exc)
+
+    # ── Try Ollama ──────────────────────────────────────────────────────
+    ollama_url = os.getenv("OLLAMA_BASE_URL", "")
+    if ollama_url:
+        try:
+            return _analyze_with_ollama(transcript_text, ollama_url)
+        except Exception as exc:
+            logger.warning("Ollama failed (%s), falling back to stub.", exc)
+
+    # ── Fallback ────────────────────────────────────────────────────────
+    logger.warning("No AI provider available — using stub analysis.")
+    return _stub_analysis(segments)
+
+
+def _analyze_with_anthropic(transcript_text: str) -> dict:
+    """Call Claude via API."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=2048,
@@ -187,11 +220,112 @@ def analyze_call(segments: list[dict], call_id: str) -> dict:
     if not tool_block:
         raise RuntimeError("Claude did not return a tool_use block.")
 
+    return _verify_and_return(transcript_text, tool_block)
+
+
+def _analyze_with_openai(transcript_text: str) -> dict:
+    """Call OpenAI GPT-4o-mini via function-calling API."""
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": transcript_text},
+        ],
+        tools=_build_openai_tools(),
+        tool_choice={"type": "function", "function": {"name": "submit_call_analysis"}},
+        temperature=0,
+    )
+
+    msg = response.choices[0].message
+    if not msg.tool_calls:
+        raise RuntimeError("OpenAI did not return a tool call.")
+
+    tool_block = json.loads(msg.tool_calls[0].function.arguments)
+    return _verify_and_return(transcript_text, tool_block)
+
+
+def _analyze_with_gemini(transcript_text: str, api_key: str) -> dict:
+    """Call Google Gemini via function-calling API (free tier)."""
+    from google import genai
+
+    client = genai.Client(api_key=api_key)
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+    tools = _build_openai_tools()
+    gemini_tools = [{"function_declarations": [t["function"] for t in tools]}]
+
+    response = client.models.generate_content(
+        model=model,
+        contents=f"{SYSTEM_PROMPT}\n\n{transcript_text}",
+        config={"tools": gemini_tools, "temperature": 0},
+    )
+
+    if not response.candidates:
+        raise RuntimeError("Gemini returned no candidates.")
+
+    part = response.candidates[0].content.parts[0]
+    if not part.function_call:
+        raise RuntimeError("Gemini did not return a function call.")
+
+    tool_block = {k: v for k, v in part.function_call.args.items()}
+    return _verify_and_return(transcript_text, tool_block)
+
+
+def _analyze_with_ollama(transcript_text: str, base_url: str) -> dict:
+    """Call a local LLM via Ollama's OpenAI-compatible endpoint.
+
+    Requires: ollama installed, a model pulled (e.g. 'llama3.2:3b').
+    The model must support tool/function calling for structured output.
+    """
+    from openai import OpenAI
+
+    model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+    client = OpenAI(base_url=f"{base_url.rstrip('/')}/v1", api_key="ollama")
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": transcript_text},
+        ],
+        tools=_build_openai_tools(),
+        tool_choice={"type": "function", "function": {"name": "submit_call_analysis"}},
+        temperature=0,
+    )
+
+    msg = response.choices[0].message
+    if not msg.tool_calls:
+        raise RuntimeError(f"Ollama/{model} did not return a tool call.")
+
+    tool_block = json.loads(msg.tool_calls[0].function.arguments)
+    return _verify_and_return(transcript_text, tool_block)
+
+
+def _build_openai_tools() -> list[dict]:
+    """Convert the Anthropic tool definition to OpenAI function-calling format."""
+    anthropic_tools = _build_tool_def()
+    openai_tools = []
+    for t in anthropic_tools:
+        openai_tools.append({
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t.get("description", ""),
+                "parameters": t["input_schema"],
+            },
+        })
+    return openai_tools
+
+
+def _verify_and_return(transcript_text: str, tool_block: dict) -> dict:
+    """Extract scores/tags from a tool block and run the hallucination guardrail."""
     is_sales = tool_block.get("is_sales_call", True)
     raw_tags = tool_block.get("tags", [])
     raw_scores = tool_block.get("scores", [])
 
-    # ── Anti-hallucination guardrail ────────────────────────────────────
     verified_tags = _verify_quotes_in_transcript(transcript_text, raw_tags)
 
     if raw_tags and not verified_tags:

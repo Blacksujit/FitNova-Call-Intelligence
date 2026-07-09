@@ -12,3 +12,9 @@ python-jose[cryptography]>=3.3.0
 plotly>=6.8.0
 # spaCy optional — for NER-based PII redaction (falls back to regex)
 spacy>=3.8.0
+# Local transcription (free, open-source). No API key needed.
+#   pip install faster-whisper
+# Gemini (free tier, no credit card needed)
+google-genai>=1.0.0
+# Local analysis via Ollama (free, open-source). Needs ollama running.
+#   pip install openai

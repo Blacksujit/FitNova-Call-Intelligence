@@ -348,7 +348,7 @@ def render_plotly_bar(df: pd.DataFrame, x_col: str, y_col: str, title: str, colo
         hovertemplate=f"<b>%{{x}}</b><br>{y_col}: %{{y:.1f}}/5<extra></extra>",
         marker_line_width=0,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 def render_plotly_dimension_breakdown(df: pd.DataFrame, title: str, height: int = 250):
@@ -370,7 +370,7 @@ def render_plotly_dimension_breakdown(df: pd.DataFrame, title: str, height: int 
         hovertemplate="<b>%{x}</b><br>Score: %{y:.1f}/5<extra></extra>",
         marker_line_width=0,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 def kpi_card(label: str, value: str, help_text: str = ""):
@@ -483,7 +483,7 @@ def render_call_card(detail: dict, show_contest: bool = False, key_prefix: str =
                     f'<div style="margin-bottom:0.5rem;">Overall: {score_badge_html(overall)}</div>',
                     unsafe_allow_html=True,
                 )
-            st.dataframe(df_scores, use_container_width=True, hide_index=True)
+            st.dataframe(df_scores, width="stretch", hide_index=True)
 
         if tags_list:
             st.subheader("Flags")
@@ -511,7 +511,7 @@ def render_dimension_breakdown(scores: list[dict], title: str):
         f'<div style="margin-bottom:0.5rem;">{title}: {score_badge_html(overall)}</div>',
         unsafe_allow_html=True,
     )
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=overall,
@@ -534,7 +534,7 @@ def render_dimension_breakdown(scores: list[dict], title: str):
         paper_bgcolor="rgba(0,0,0,0)",
         font={"color": "#94a3b8", "family": "Inter, sans-serif"},
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Inject CSS ─────────────────────────────────────────────────────────
@@ -689,7 +689,7 @@ if role == "sales_director":
                 for t in teams_data
             ])
             render_plotly_bar(team_df, "Team", "Avg Score", None)
-            st.dataframe(team_df.style.bar(subset=["Avg Score"], color="#4CAF50"), use_container_width=True, hide_index=True)
+            st.dataframe(team_df.style.bar(subset=["Avg Score"], color="#4CAF50"), width="stretch", hide_index=True)
 
         # ── Active tags ────────────────────────────────────────────────
         st.subheader("Active Tags (Org-Wide)")
@@ -728,8 +728,8 @@ if role == "sales_director":
                 height=200, margin={"t": 10, "b": 20, "l": 10, "r": 10},
             )
             fig.update_traces(hovertemplate="<b>%{x}</b>: %{y}<extra></extra>")
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-            st.dataframe(pd.DataFrame(tag_rows), use_container_width=True, hide_index=True)
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.dataframe(pd.DataFrame(tag_rows), width="stretch", hide_index=True)
         else:
             st.success("No active flags.")
 
@@ -763,7 +763,7 @@ elif role == "team_leader":
             for a in advisors_list
         ])
         render_plotly_bar(adv_df, "Advisor", "Avg Score", None)
-        st.dataframe(adv_df.style.bar(subset=["Avg Score"], color="#2196F3"), use_container_width=True, hide_index=True)
+        st.dataframe(adv_df.style.bar(subset=["Avg Score"], color="#2196F3"), width="stretch", hide_index=True)
 
     st.subheader("Calls & Tags")
     any_calls = False
