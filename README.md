@@ -2,9 +2,9 @@
 
 Automated sales-call intelligence for FitNova. Transcribes, diarises, scores, and flags issues in advisor calls — surfaced via role-based dashboards with a human-in-the-loop feedback mechanism.
 
-**Live Demo:** [https://fitnova-dashboard.onrender.com/](https://fitnova-dashboard.onrender.com/) — Login: `director@fitnova.in` / `admin123`
+**Live Demo:** [fitnova-dashboard.onrender.com](https://fitnova-dashboard.onrender.com/) — Login: `director@fitnova.in` / `admin123`
 
-**Video Walkthrough:** [https://www.loom.com/share/36ebe3029df145c597a80071058e76a0](https://www.loom.com/share/36ebe3029df145c597a80071058e76a0)
+**Video Walkthrough:** [▶ Watch Demo](https://www.loom.com/share/36ebe3029df145c597a80071058e76a0)
 
 ---
 
