@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="play" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B6B"/>
+      <stop offset="100%" style="stop-color:#ee5a24"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" rx="12" fill="url(#bg)"/>
+  
+  <!-- Mock screen content -->
+  <rect x="40" y="40" width="720" height="370" rx="8" fill="#0f3460" opacity="0.5"/>
+  
+  <!-- Mock sidebar -->
+  <rect x="55" y="55" width="180" height="340" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="70" y="70" width="150" height="12" rx="4" fill="#FF6B6B" opacity="0.6"/>
+  <rect x="70" y="95" width="150" height="8" rx="4" fill="#555" opacity="0.4"/>
+  <rect x="70" y="115" width="150" height="8" rx="4" fill="#555" opacity="0.4"/>
+  <rect x="70" y="135" width="150" height="8" rx="4" fill="#555" opacity="0.4"/>
+  
+  <!-- Mock header -->
+  <rect x="255" y="55" width="500" height="50" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="270" y="65" width="200" height="10" rx="4" fill="#aaa" opacity="0.6"/>
+  <rect x="270" y="83" width="140" height="8" rx="4" fill="#777" opacity="0.4"/>
+  
+  <!-- Mock KPI cards -->
+  <rect x="255" y="120" width="115" height="60" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="385" y="120" width="115" height="60" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="515" y="120" width="115" height="60" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="645" y="120" width="100" height="60" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  
+  <rect x="270" y="132" width="40" height="8" rx="4" fill="#FF6B6B" opacity="0.8"/>
+  <rect x="270" y="148" width="85" height="20" rx="4" fill="#fff" opacity="0.3"/>
+  <rect x="400" y="132" width="40" height="8" rx="4" fill="#FF6B6B" opacity="0.8"/>
+  <rect x="400" y="148" width="85" height="20" rx="4" fill="#fff" opacity="0.3"/>
+  
+  <!-- Mock chart -->
+  <rect x="255" y="195" width="490" height="100" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="270" y="210" width="40" height="30" rx="3" fill="#FF6B6B" opacity="0.6"/>
+  <rect x="320" y="225" width="40" height="15" rx="3" fill="#ee5a24" opacity="0.6"/>
+  <rect x="370" y="218" width="40" height="22" rx="3" fill="#FF6B6B" opacity="0.6"/>
+  <rect x="420" y="230" width="40" height="10" rx="3" fill="#ee5a24" opacity="0.6"/>
+  <rect x="470" y="215" width="40" height="25" rx="3" fill="#FF6B6B" opacity="0.6"/>
+  <rect x="520" y="222" width="40" height="18" rx="3" fill="#ee5a24" opacity="0.6"/>
+  
+  <!-- Mock table -->
+  <rect x="255" y="310" width="490" height="70" rx="6" fill="#1a1a2e" opacity="0.8"/>
+  <rect x="270" y="320" width="460" height="8" rx="4" fill="#555" opacity="0.4"/>
+  <rect x="270" y="338" width="460" height="8" rx="4" fill="#555" opacity="0.3"/>
+  <rect x="270" y="356" width="460" height="8" rx="4" fill="#555" opacity="0.3"/>
+
+  <!-- Gradient overlay -->
+  <rect width="800" height="450" rx="12" fill="#000" opacity="0.3"/>
+  
+  <!-- Play button -->
+  <circle cx="400" cy="225" r="55" fill="url(#play)" opacity="0.95"/>
+  <circle cx="400" cy="225" r="55" fill="none" stroke="#fff" stroke-width="3" opacity="0.3"/>
+  <polygon points="385,200 385,250 425,225" fill="#fff"/>
+  
+  <!-- Text -->
+  <text x="400" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#fff" font-weight="bold" opacity="0.9">FitNova Call Intelligence — Demo Walkthrough</text>
+  <text x="400" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#aaa" opacity="0.7">▶ Click to watch</text>
+</svg>

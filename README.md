@@ -4,7 +4,9 @@ Automated sales-call intelligence for FitNova. Transcribes, diarises, scores, an
 
 **Live Demo:** [fitnova-dashboard.onrender.com](https://fitnova-dashboard.onrender.com/) — Login: `director@fitnova.in` / `admin123`
 
-**Video Walkthrough:** [▶ Watch Demo](https://www.loom.com/share/36ebe3029df145c597a80071058e76a0)
+**Video Walkthrough:**
+
+[![FitNova Call Intelligence Demo](demo-thumbnail.svg)](https://www.loom.com/share/36ebe3029df145c597a80071058e76a0)
 
 ---
 
