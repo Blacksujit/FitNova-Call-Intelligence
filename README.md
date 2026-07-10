@@ -6,7 +6,14 @@ Automated sales-call intelligence for FitNova. Transcribes, diarises, scores, an
 
 **Video Walkthrough:**
 
-[![FitNova Call Intelligence Demo](demo-thumbnail.svg)](https://www.loom.com/share/36ebe3029df145c597a80071058e76a0)
+<div>
+    <a href="https://www.loom.com/share/36ebe3029df145c597a80071058e76a0">
+      <p>FITNOA AI Pipeline for Call Intelligence - Watch Video</p>
+    </a>
+    <a href="https://www.loom.com/share/36ebe3029df145c597a80071058e76a0">
+      <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/36ebe3029df145c597a80071058e76a0-9867fc4b56d9f89b-full-play.gif#t=0.1">
+    </a>
+  </div>
 
 ---
 
